@@ -99,11 +99,13 @@ def getUsageParams():
             print("Connectivity to the zoo keeper succeeded")
             jresp = json.dumps({"status":"success","reason":"none"})
             resp = Response(jresp, status=200, mimetype='application/json')
+            zk.stop()
             return resp
         else:
             print("Failed to connect to mongodb or redis")
             jresp = json.dumps({"status":"fail","reason":"Failed to connect to mongo/redis"})
             resp = Response(jresp, status=500, mimetype='application/json')
+            zk.stop()
             return resp
     except:
         print("Failed to connect to zoo keeper")
