@@ -9,15 +9,14 @@ import json
 from bson.objectid import ObjectId
 import psutil
 from kazoo.client import KazooClient
+import config
+import logging
+from flask import Response
 
 app = Flask(__name__)
+mongodb_ok = False
+redis_ok = False
 
-# Intializing MongoDB Client ------------------------------------------------------------------------------
-client = MongoClient("mongodb+srv://cubus:"+ urllib.quote_plus("@Cu2010bus") +"@cluster0-kxvpc.mongodb.net/test?retryWrites=true&w=majority")
-mongodb = client.CubusDBTest
-
-# Intializing Redis Client --------------------------------------------------------------------------------
-redisdb = redis.Redis(host="redis-11737.c1.asia-northeast1-1.gce.cloud.redislabs.com",port="11737",password="vPt0IxefzMh8SdhfgbwzI5ltabzkz8BK")
 
 # App route to validate the credentials -------------------------------------------------------------------
 # Input Params : Username, Password
@@ -67,45 +66,71 @@ def userProfileUpdate(Id,firstName,lastName,emailAddr):
         print("Error : " + ex)
         return("Failed to update profile information")
 
-@app.route('/auth/healthcheck',methods=['GET'])
+@app.route('/auth/healthz',methods=['GET'])
 def getUsageParams():
-    cpuPercent = psutil.cpu_percent(interval=None)
-    totalMem = psutil.virtual_memory()[0]
-    availMem = psutil.virtual_memory()[1]
-    memPercent = psutil.virtual_memory()[2]
-    diskPercent = psutil.disk_usage('/')[3]
-    print("CPU Percentage : " + str(cpuPercent) + "%")
-    print("Memory Percentage: " + str(memPercent) + "%")
-    result = json.dumps({'result':{'cpuPercent':str(cpuPercent),'memPercent':str(memPercent),'diskPercent':str(diskPercent)}})
-    # return(result)
+    try:
+        zk = KazooClient(hosts=config.ZOOKEEPER_HOST,timeout=5,max_retries=3)
+        zk.start()
+        data = json.dumps({
+                "authservice":{
+                    "url":"http://authservice.default.svc.cluster.local:4002/auth/validate/"
+                },
+                "profileget":{
+                    "url":"http://authservice.default.svc.cluster.local:4002/userprofile/userprofileget/"
+                },
+                "profileupdate":{
+                    "url":"http://authservice.default.svc.cluster.local:4002/userprofile/userprofileupdate"
+                },
+                "healthcheck":{
+                    "url":"http://authservice.default.svc.cluster.local:4002/auth/healthz"
+                }
+            })
 
-zk = KazooClient(hosts='172.17.0.2:2181')
-zk.start()
-data = json.dumps({
-        "authservice":{
-            "url":"http://127.0.0.1:5000/auth/validate/"
-            },
-        "profileget":{
-            "url":"http://127.0.0.1:5000/userprofile/userprofileget/"
-        },
-        "profileupdate":{
-            "url":"http://127.0.0.1:5000/userprofile/userprofileupdate"
-        },
-        "healthcheck":{
-            "url":"http://127.0.0.1:5000/auth/healthcheck"
-        }
-    })
-if zk.exists("/jarvis/ironman"):
-    print("Jarvis Updating Ironman")
-    zk.set("/jarvis/ironman",data)
-    print("Ironman Updated")
-else:
-    print("Jarvis Creating Ironman")
-    zk.create("/jarvis/ironman",data)
-    print("Ironman Created")
-zk.stop()
+        if zk.exists("/microservices/authservice"):
+            print("Zookeeper Updating Authservice")
+            zk.set("/microservices/authservice",data)
+            print("Authservice configuration updated")
+        else:
+            print("Zookeeper Creating Authservice")
+            zk.create("/microservices/authservice",data)
+            print("Authservice configuration created")
+            zk.stop()
+        if mongodb_ok == True and redis_ok == True:
+            print("Connectivity to the zoo keeper succeeded")
+            jresp = json.dumps({"status":"success","reason":"none"})
+            resp = Response(jresp, status=200, mimetype='application/json')
+            return resp
+        else:
+            print("Failed to connect to mongodb or redis")
+            jresp = json.dumps({"status":"fail","reason":"Failed to connect to mongo/redis"})
+            resp = Response(jresp, status=500, mimetype='application/json')
+            return resp
+    except:
+        print("Failed to connect to zoo keeper")
+        jresp = json.dumps({"status":"fail","reason":"Failed to connect to zookeeper"})
+        resp = Response(jresp, status=500, mimetype='application/json')
+        return resp
+
+    
+
 if __name__ == '__main__':
-    app.run(debug=True,host='127.0.0.1',port='5000')
+    # Intializing MongoDB Client ------------------------------------------------------------------------------
+    try:
+        client = MongoClient(config.MONGODB_HOST)
+        mongodb = client.CubusDBTest
+        mongodb_ok = True
+        print("Mongo DB OK")
+    except Exception as ex:
+        print("Exception occured while connecting to mongo db error : " + str(ex))
+
+# Intializing Redis Client --------------------------------------------------------------------------------
+    try:
+        redisdb = redis.Redis(host=config.REDIS_HOST,port=config.REDIS_PORT,password=config.REDIS_PASSWORD)
+        redis_ok = True
+        print("Redis OK")
+    except Exception as ex:
+        print("Exception occured while connecting to redis db : " + str(ex))
+    app.run(debug=config.DEBUG_MODE,host='0.0.0.0',port=config.PORT)
 
 
 

@@ -1,0 +1,40 @@
+apiVersion: apps/v1beta2
+kind: Deployment
+metadata:
+  name: authservice
+spec:
+  replicas: 2
+  strategy:
+   type: RollingUpdate
+   rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 24%
+  selector:
+    matchLabels:
+      app: authservice
+  template:
+    metadata:
+      labels:
+        app: authservice
+    spec:
+      containers:
+      - name: authservice-container
+        image: rcavinash123/authservice:v1.0.0
+        ports:
+          - containerPort: 4002
+            protocol: TCP
+        resources:
+          requests:
+            memory: 512Mi
+          limits:
+            memory: 1Gi
+        env:
+          - name: DEBUG_MODE
+            value: "0"
+        readinessProbe:
+          httpGet:
+            path: /auth/healthz
+            port: 4002
+          initialDelaySeconds: 20
+          periodSeconds: 20
+          
