@@ -19,7 +19,7 @@ spec:
     spec:
       containers:
       - name: authservice-container
-        image: rcavinash123/authservice:v1.0.1
+        image: rcavinash123/authservice:v1.0.2
         ports:
           - containerPort: 4002
             protocol: TCP
