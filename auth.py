@@ -79,7 +79,7 @@ def getUsageParams():
                     "url":"http://authservice.default.svc.cluster.local:4002/userprofile/userprofileget/"
                 },
                 "profileupdate":{
-                    "url":"http://authservice.default.svc.cluster.local:4002/userprofile/userprofileupdate"
+                    "url":"http://authservice.default.svc.cluster.local:4002/userprofile/userprofileupdate/"
                 },
                 "healthcheck":{
                     "url":"http://authservice.default.svc.cluster.local:4002/auth/healthz"
@@ -89,6 +89,7 @@ def getUsageParams():
         if zk.exists("/microservices/authservice"):
             print("Zookeeper Updating Authservice")
             zk.set("/microservices/authservice",data)
+            zk.stop()
             print("Authservice configuration updated")
         else:
             print("Zookeeper Creating Authservice")
