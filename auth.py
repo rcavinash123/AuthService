@@ -22,6 +22,7 @@ redis_ok = False
 # Input Params : Username, Password
 @app.route('/auth/validate/<userName>/<password>',methods=['POST'])
 def userValidate(userName,password):
+    print("Requested for username password validation")
     redisdb.ping()
     users = mongodb.users
     result = []
@@ -33,38 +34,8 @@ def userValidate(userName,password):
         result = {'id' : str(user['_id'])}
     else:
         result = {"ErrorDesc":"No Users Found"}
+    print("Returning Response")
     return jsonify({'result':result})
-
-# App route to get profile information ---------------------------------------------------------------------
-# Input Params : ID
-@app.route('/userprofile/userprofileget/<ID>',methods=['GET'])
-def userProfileGet(ID):
-    try:
-        redisdb.ping()
-        userInfo = redisdb.get(ID).decode('utf-8')
-        redisdb.expire(ID,1800)
-        return jsonify(userInfo)
-    except Exception as ex:
-        print("Error : "+ex)
-        return("Failed to connect to redis")
-
-# App route to update profile information -------------------------------------------------------------------
-# Input Params : ID, FirstName, LastName, Email Address
-@app.route('/userprofile/userprofileupdate/<Id>/<firstName>/<lastName>/<emailAddr>',methods=['POST'])
-def userProfileUpdate(Id,firstName,lastName,emailAddr):
-    try:
-        users = mongodb.users
-        query = {"_id":ObjectId(Id)}
-        values = {"$set":{"firstName":firstName,"lastName":lastName,"emailAddr":emailAddr}}
-        users.update_one(query,values)
-        redisdb.ping()
-        redisData = []
-        redisData = json.dumps({"result":{'id':Id,'firstName':firstName, 'lastName':lastName,'emailAddr':emailAddr}})
-        redisdb.setex(Id,1800,redisData)
-        return json.dumps({"result":{"Success":"true"}})
-    except Exception as ex:
-        print("Error : " + ex)
-        return("Failed to update profile information")
 
 @app.route('/auth/healthz',methods=['GET'])
 def getUsageParams():
@@ -74,12 +45,6 @@ def getUsageParams():
         data = json.dumps({
                 "authservice":{
                     "url":"http://authservice.default.svc.cluster.local:4002/auth/validate/"
-                },
-                "profileget":{
-                    "url":"http://authservice.default.svc.cluster.local:4002/userprofile/userprofileget/"
-                },
-                "profileupdate":{
-                    "url":"http://authservice.default.svc.cluster.local:4002/userprofile/userprofileupdate/"
                 },
                 "healthcheck":{
                     "url":"http://authservice.default.svc.cluster.local:4002/auth/healthz"
