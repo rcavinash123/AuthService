@@ -44,7 +44,6 @@ def userValidate(userName,password):
             result = jsonify({"result":{"status":"false","code":"500","reason":"No Users Found"}})
         print("Returning Response")
         client.close()
-        redisdb.close()
         return result
     except Exception as ex:
         result = jsonify({"result":{"status":"false","code":"500","reason":str(ex)}})
@@ -69,7 +68,6 @@ def getUsageParams():
         redisdb = redis.Redis(host=redishost,port=redisport,password=redispwd)
         print("MongoDB Ok")
         RedisOK = True
-        redisdb.close()
 
         jresp = json.dumps({"status":"OK","reason":"None"})
         resp = Response(jresp, status=200, mimetype='application/json')
