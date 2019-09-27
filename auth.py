@@ -31,23 +31,24 @@ def userValidate(userName,password):
 
         redisdb = redis.Redis(host=redishost,port=redisport,password=redispwd)
         redisdb.ping()
-
+        print("Before getting data from mongo db")
         users = mongodb.users
         result = []
         redisData = []
         user = users.find_one({'userName' : userName,'password':password})
+        print("Got data from mongo db")
         if user: 
             redisData = json.dumps({"result":{'id':str(user['_id']),'userId' : user['userId'],'firstName':user['firstName'], 'lastName':user['lastName'],'emailAddr':user['emailAddr']}})
             redisdb.setex(str(user['_id']),1800,redisData)
             result = json.dumps({"result":{"status":"true","code":"200","data":{"id" : str(user['_id'])}}})
             result = Response(result,status=200,content_type="application/json")        
         else:
-            result = jsonify({"result":{"status":"false","code":"500","reason":"No Users Found"}})
+            result = json.dumps({"result":{"status":"false","code":"500","reason":"No Users Found"}})
         print("Returning Response")
         client.close()
         return result
     except Exception as ex:
-        result = jsonify({"result":{"status":"false","code":"500","reason":str(ex)}})
+        result = json.dumps({"result":{"status":"false","code":"500","reason":str(ex)}})
         return result
 
 @app.route('/auth/healthz',methods=['GET'])
