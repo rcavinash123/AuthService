@@ -20,6 +20,8 @@ app = Flask(__name__)
 app = Flask(__name__)
 
 mongourl = ""
+mongousername = ""
+mongopassword = ""
 redishost=""
 redisport=""
 redispwd=""
@@ -30,7 +32,7 @@ redispwd=""
 def userValidate(userName,password):
     logging.debug("Requested for username password validation")
     try:
-        client = MongoClient(mongourl)
+        client = MongoClient(mongourl,username=mongousername,password=mongopassword)
         mongodb = client.CubusDBTest
 
         redisdb = redis.Redis(host=redishost,port=redisport,password=redispwd)
@@ -65,7 +67,7 @@ def getUsageParams():
         logging.debug("ZOO Ok")
         zk.stop()
 
-        client = MongoClient(mongourl)
+        client = MongoClient(mongourl,username=mongousername,password=mongopassword)
         mongodb = client.CubusDBTest
         logging.debug("MongoDB Ok")
         MongoOK = True
@@ -104,12 +106,18 @@ if __name__ == '__main__':
                 mongodata = zk.get("/databases/mongodb")
                 mongodata = json.loads(mongodata[0])
                 mongourl = mongodata["endpoints"]["url"]
+                mongousername = mongodata["endpoints"]["username"]
+                mongopassword = mongodata["endpoints"]["password"]
                 logging.debug("Fetched mongodb config from zookeeper")
             else:
                 mongourl = config.MONGODB_HOST
+                mongousername = config.MONGODB_USERNAME
+                mongopassword = config.MONGODB_PWD
         except:
             logging.debug("Failed to fetch mongodb config from zookeeper. Reverting to default value")
             mongourl = config.MONGODB_HOST
+            mongousername = config.MONGODB_USERNAME
+            mongopassword = config.MONGODB_PWD
     
         try:
             if zk.exists("/databases/redisdb"):
