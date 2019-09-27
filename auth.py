@@ -39,7 +39,8 @@ def userValidate(userName,password):
         if user: 
             redisData = json.dumps({"result":{'id':str(user['_id']),'userId' : user['userId'],'firstName':user['firstName'], 'lastName':user['lastName'],'emailAddr':user['emailAddr']}})
             redisdb.setex(str(user['_id']),1800,redisData)
-            result = jsonify({"result":{"status":"true","code":"200","data":{"id" : str(user['_id'])}}})
+            result = json.dumps({"result":{"status":"true","code":"200","data":{"id" : str(user['_id'])}}})
+            result = Response(result,status=200,content_type="application/json")        
         else:
             result = jsonify({"result":{"status":"false","code":"500","reason":"No Users Found"}})
         print("Returning Response")
