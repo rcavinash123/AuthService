@@ -13,6 +13,10 @@ import config
 import logging
 from flask import Response
 
+FORMAT = '%(asctime)-15s %(clientip)s %(user)-8s %(message)s'
+logging.basicConfig(level=logging.DEBUG)
+app = Flask(__name__)
+
 app = Flask(__name__)
 
 mongourl = ""
@@ -24,19 +28,19 @@ redispwd=""
 # Input Params : Username, Password
 @app.route('/auth/validate/<userName>/<password>',methods=['POST'])
 def userValidate(userName,password):
-    print("Requested for username password validation")
+    logging.debug("Requested for username password validation")
     try:
         client = MongoClient(mongourl)
         mongodb = client.CubusDBTest
 
         redisdb = redis.Redis(host=redishost,port=redisport,password=redispwd)
         redisdb.ping()
-        print("Before getting data from mongo db")
+        logging.debug("Before getting data from mongo db")
         users = mongodb.users
         result = []
         redisData = []
         user = users.find_one({'userName' : userName,'password':password})
-        print("Got data from mongo db")
+        logging.debug("Got data from mongo db")
         if user: 
             redisData = json.dumps({"result":{'id':str(user['_id']),'userId' : user['userId'],'firstName':user['firstName'], 'lastName':user['lastName'],'emailAddr':user['emailAddr']}})
             redisdb.setex(str(user['_id']),1800,redisData)
@@ -44,7 +48,7 @@ def userValidate(userName,password):
             result = Response(result,status=200,content_type="application/json")        
         else:
             result = json.dumps({"result":{"status":"false","code":"500","reason":"No Users Found"}})
-        print("Returning Response")
+        logging.debug("Returning Response")
         client.close()
         return result
     except Exception as ex:
@@ -58,17 +62,17 @@ def getUsageParams():
     try:
         zk = KazooClient(hosts=config.ZOOKEEPER_HOST,timeout=5,max_retries=3)
         zk.start()
-        print("ZOO Ok")
+        logging.debug("ZOO Ok")
         zk.stop()
 
         client = MongoClient(mongourl)
         mongodb = client.CubusDBTest
-        print("MongoDB Ok")
+        logging.debug("MongoDB Ok")
         MongoOK = True
         client.close()
 
         redisdb = redis.Redis(host=redishost,port=redisport,password=redispwd)
-        print("MongoDB Ok")
+        logging.debug("MongoDB Ok")
         RedisOK = True
 
         jresp = json.dumps({"status":"OK","reason":"None"})
@@ -78,13 +82,13 @@ def getUsageParams():
     except:
         Reason=None
         if MongoOK == False:
-            print("Failed to connect to MongoDB")
+            logging.debug("Failed to connect to MongoDB")
             Reason = "Failed to connect to MongoDB"
         elif RedisOK == False:
-            print("Failed to connect to RedisDB")
+            logging.debug("Failed to connect to RedisDB")
             Reason = "Failed to connect to RedisDB"
         else:
-            print("Failed to connect to zoo keeper")
+            logging.debug("Failed to connect to zoo keeper")
             Reason = "Failed to connect to zoo keeper"
 
         jresp = json.dumps({"status":"fail","reason":Reason})
@@ -100,11 +104,11 @@ if __name__ == '__main__':
                 mongodata = zk.get("/databases/mongodb")
                 mongodata = json.loads(mongodata[0])
                 mongourl = mongodata["endpoints"]["url"]
-                print("Fetched mongodb config from zookeeper")
+                logging.debug("Fetched mongodb config from zookeeper")
             else:
                 mongourl = config.MONGODB_HOST
         except:
-            print("Failed to fetch mongodb config from zookeeper. Reverting to default value")
+            logging.debug("Failed to fetch mongodb config from zookeeper. Reverting to default value")
             mongourl = config.MONGODB_HOST
     
         try:
@@ -114,13 +118,13 @@ if __name__ == '__main__':
                 redishost = redisdata["endpoints"]["host"]
                 redisport = redisdata["endpoints"]["port"]
                 redispwd = redisdata["endpoints"]["password"]
-                print("Fetched redisdb config from zookeeper")
+                logging.debug("Fetched redisdb config from zookeeper")
             else:
                 redishost = config.REDIS_HOST
                 redisport = config.REDIS_PORT
                 redispwd = config.REDIS_PASSWORD
         except:
-            print("Failed to fetch redis config from zookeeper. Reverting to default value")
+            logging.debug("Failed to fetch redis config from zookeeper. Reverting to default value")
             redishost = config.REDIS_HOST
             redisport = config.REDIS_PORT
             redispwd = config.REDIS_PASSWORD
@@ -135,17 +139,17 @@ if __name__ == '__main__':
             })
 
         if zk.exists("/microservices/authservice"):
-            print("Zookeeper Updating Authservice")
+            logging.debug("Zookeeper Updating Authservice")
             zk.set("/microservices/authservice",data)
-            print("Authservice configuration updated")
+            logging.debug("Authservice configuration updated")
         else:
-            print("Zookeeper Creating Authservice")
+            logging.debug("Zookeeper Creating Authservice")
             zk.create("/microservices/authservice",data)
-            print("Authservice configuration created")
+            logging.debug("Authservice configuration created")
         zk.stop()
 
     except:
-        print("Failed to connect to zookeeper. Reverting to default value")
+        logging.debug("Failed to connect to zookeeper. Reverting to default value")
         redishost = config.REDIS_HOST
         redisport = config.REDIS_PORT
         redispwd = config.REDIS_PASSWORD
