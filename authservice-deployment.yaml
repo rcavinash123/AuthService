@@ -19,7 +19,7 @@ spec:
     spec:
       containers:
       - name: authservice-container
-        image: rcavinash123/authservice:v1.1.0
+        image: rcavinash123/authservice:v1.1.1
         ports:
           - containerPort: 4002
             protocol: TCP
@@ -31,10 +31,4 @@ spec:
         env:
           - name: DEBUG_MODE
             value: "0"
-        readinessProbe:
-          httpGet:
-            path: /auth/healthz
-            port: 4002
-          initialDelaySeconds: 20
-          periodSeconds: 20
           
